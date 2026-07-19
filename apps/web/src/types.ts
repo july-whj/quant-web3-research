@@ -50,7 +50,7 @@ export interface MarketStreamRecord {
   exchange: string
   symbol: string
   timeframe: string
-  status: 'starting' | 'connecting' | 'live' | 'degraded' | 'disconnected'
+  status: 'starting' | 'connecting' | 'live' | 'degraded' | 'disconnected' | 'ready'
   row_count: number
   last_closed_open_time: string | null
   last_received_at: string | null

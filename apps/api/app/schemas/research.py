@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -84,6 +85,49 @@ class MarketStreamResponse(BaseModel):
     reconnect_count: int
     backfilled_candles: int
     last_error: str | None
+
+
+class MarketCandleItem(BaseModel):
+    open_time: datetime
+    close_time: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    volume: Decimal
+    trade_count: int | None
+    source: str
+
+
+class MarketCandlePageResponse(BaseModel):
+    exchange: str
+    symbol: str
+    timeframe: str
+    timezone: Literal["UTC"] = "UTC"
+    items: list[MarketCandleItem]
+    next_before: datetime | None
+    has_more: bool
+
+
+class MarketSignalItem(BaseModel):
+    signal_time: datetime
+    execution_time: datetime
+    side: Literal["buy", "sell"]
+    signal_price: Decimal
+    execution_price: Decimal
+    fast_ma: Decimal
+    slow_ma: Decimal
+    reason: Literal["ma_cross_up", "ma_cross_down"]
+
+
+class MarketSignalPageResponse(BaseModel):
+    exchange: str
+    symbol: str
+    timeframe: str
+    strategy_name: Literal["ma_cross_long_only"] = "ma_cross_long_only"
+    fast_window: int
+    slow_window: int
+    items: list[MarketSignalItem]
 
 
 class UsageSummary(BaseModel):

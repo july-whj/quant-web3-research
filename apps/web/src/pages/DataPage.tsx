@@ -1,14 +1,19 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, Database, LoaderCircle, RefreshCw, Server, Waves } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { listDatasets, listMarketStreams } from '../features/datasets/api'
+import { MarketChartWorkspace } from '../features/market-chart/MarketChartWorkspace'
+import type { MarketExchange, MarketTimeframe } from '../features/market-chart/types'
 import { currentLanguage } from '../i18n'
 import { formatDateTime } from '../lib/format'
 
 export function DataPage() {
   const { t } = useTranslation()
   const language = currentLanguage()
+  const [selectedExchange, setSelectedExchange] = useState<MarketExchange>('binance')
+  const [selectedTimeframe, setSelectedTimeframe] = useState<MarketTimeframe>('1h')
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: listDatasets })
   const streams = useQuery({
     queryKey: ['market-streams'],
@@ -17,7 +22,8 @@ export function DataPage() {
   })
   const sources = streams.data?.length
     ? streams.data.map((stream) => ({
-        exchange: stream.exchange.toUpperCase(),
+        exchange: stream.exchange,
+        exchangeLabel: stream.exchange.toUpperCase(),
         symbol: stream.symbol,
         timeframe: stream.timeframe,
         records: String(stream.row_count),
@@ -26,14 +32,15 @@ export function DataPage() {
       }))
     : datasets.data?.length
     ? datasets.data.map((dataset) => ({
-        exchange: dataset.exchange,
+        exchange: dataset.exchange.toLowerCase(),
+        exchangeLabel: dataset.exchange,
         symbol: dataset.symbol,
         timeframe: dataset.timeframe,
         records: String(dataset.row_count),
         lastClosed: null,
         status: 'ready',
       }))
-    : [{ exchange: 'Binance', symbol: 'BTC/USDT', timeframe: '1d', records: '—', lastClosed: null, status: 'planned' }]
+    : [{ exchange: 'binance', exchangeLabel: 'BINANCE', symbol: 'BTC/USDT', timeframe: '1h', records: '—', lastClosed: null, status: 'planned' }]
   const refreshing = datasets.isFetching || streams.isFetching
 
   function statusLabel(status: string) {
@@ -71,6 +78,14 @@ export function DataPage() {
         </button>
       </div>
 
+      <MarketChartWorkspace
+        exchange={selectedExchange}
+        onExchangeChange={setSelectedExchange}
+        onTimeframeChange={setSelectedTimeframe}
+        streams={streams.data ?? []}
+        timeframe={selectedTimeframe}
+      />
+
       <section className="mt-8 research-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-7">
           <div><p className="font-bold">{t('data.datasets')}</p><p className="mt-1 text-xs text-muted">{t('data.storage')}</p></div>
@@ -83,8 +98,24 @@ export function DataPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {sources.map((source) => (
-                <tr key={`${source.exchange}-${source.timeframe}`}>
-                  <td className="px-7 py-5 font-semibold">{source.exchange}</td><td className="px-5 py-5">{source.symbol}</td><td className="px-5 py-5 text-muted">{source.timeframe}</td><td className="px-5 py-5 text-muted">{source.records}</td><td className="px-5 py-5 text-muted">{source.lastClosed ? formatDateTime(source.lastClosed, language) : '—'}</td>
+                <tr
+                  aria-selected={source.exchange === selectedExchange && source.timeframe === selectedTimeframe}
+                  className={`cursor-pointer transition hover:bg-[#fafafd] ${source.exchange === selectedExchange && source.timeframe === selectedTimeframe ? 'bg-[#f7f4ff]' : ''}`}
+                  key={`${source.exchange}-${source.timeframe}`}
+                  onClick={() => {
+                    if (source.exchange === 'binance' || source.exchange === 'okx') setSelectedExchange(source.exchange)
+                    setSelectedTimeframe(source.timeframe as MarketTimeframe)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      if (source.exchange === 'binance' || source.exchange === 'okx') setSelectedExchange(source.exchange)
+                      setSelectedTimeframe(source.timeframe as MarketTimeframe)
+                    }
+                  }}
+                  tabIndex={0}
+                >
+                  <td className="px-7 py-5 font-semibold">{source.exchangeLabel}</td><td className="px-5 py-5">{source.symbol}</td><td className="px-5 py-5 text-muted">{source.timeframe}</td><td className="px-5 py-5 text-muted">{source.records}</td><td className="px-5 py-5 text-muted">{source.lastClosed ? formatDateTime(source.lastClosed, language) : '—'}</td>
                   <td className="px-7 py-5 text-right"><span className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold ${statusStyle(source.status)}`}>{source.status === 'live' || source.status === 'ready' ? <CheckCircle2 size={13} /> : source.status === 'degraded' || source.status === 'disconnected' ? <AlertTriangle size={13} /> : <LoaderCircle size={13} />}{statusLabel(source.status)}</span></td>
                 </tr>
               ))}

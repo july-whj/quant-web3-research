@@ -15,11 +15,12 @@
     "@tanstack/react-query": "^5.90.0",
     "echarts": "^6.0.0",
     "i18next": "^25.0.0",
+    "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.0",
     "react-i18next": "^16.0.0",
+    "react-router-dom": "^7.9.0",
     "viem": "^2.45.0",
     "wagmi": "^3.0.0"
   },
