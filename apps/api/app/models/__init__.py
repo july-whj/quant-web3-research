@@ -1,4 +1,16 @@
 from .auth import AuthChallenge, LoginEvent, User, UserSession, UserWallet
+from .paper import (
+    PaperAccount,
+    PaperAccountSnapshot,
+    PaperBalance,
+    PaperBot,
+    PaperBotEvent,
+    PaperFill,
+    PaperLedgerEntry,
+    PaperOrder,
+    PaperPosition,
+    PaperRiskEvent,
+)
 from .research import (
     BacktestRun,
     Dataset,
@@ -15,6 +27,16 @@ __all__ = [
     "LoginEvent",
     "IngestionCheckpoint",
     "MarketCandle",
+    "PaperAccount",
+    "PaperAccountSnapshot",
+    "PaperBalance",
+    "PaperBot",
+    "PaperBotEvent",
+    "PaperFill",
+    "PaperLedgerEntry",
+    "PaperOrder",
+    "PaperPosition",
+    "PaperRiskEvent",
     "StrategyConfig",
     "StrategyConfigVersion",
     "User",

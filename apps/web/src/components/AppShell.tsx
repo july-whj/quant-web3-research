@@ -5,6 +5,7 @@ import {
   Database,
   FlaskConical,
   Menu,
+  WalletCards,
   X,
 } from 'lucide-react'
 import { useState, type PropsWithChildren } from 'react'
@@ -23,6 +24,7 @@ export function AppShell({ children }: PropsWithChildren) {
     { to: '/app/data', label: t('shell.data'), icon: Database },
     { to: '/app/strategies', label: t('shell.strategies'), icon: FlaskConical },
     { to: '/app/backtests', label: t('shell.backtests'), icon: Beaker },
+    { to: '/app/paper', label: t('shell.paperTrading'), icon: WalletCards },
   ]
 
   const sidebar = (

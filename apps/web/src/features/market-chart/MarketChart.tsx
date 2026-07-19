@@ -26,10 +26,19 @@ export interface ChartOverlay {
   points: Array<{ time: string; value: string | number }>
 }
 
+export interface ChartPriceLine {
+  id: string
+  price: number
+  color: string
+  title: string
+  lineStyle?: 'solid' | 'dashed'
+}
+
 interface MarketChartProps {
   candles: MarketCandle[]
   signals: ChartSignal[]
   overlays?: ChartOverlay[]
+  priceLines?: ChartPriceLine[]
   settings: MarketChartSettings
   locale: string
   loading: boolean
@@ -69,6 +78,7 @@ export function MarketChart({
   candles,
   signals,
   overlays = [],
+  priceLines = [],
   settings,
   locale,
   loading,
@@ -122,7 +132,13 @@ export function MarketChart({
           vertLines: { color: '#f0f0f4' },
           horzLines: { color: '#f0f0f4' },
         },
-        crosshair: { mode: charts.CrosshairMode.Normal },
+        crosshair: {
+          mode: charts.CrosshairMode.Normal,
+          // The temporary axis label can collide with the latest-price badge
+          // and make the current token price appear to disappear on hover.
+          // OHLC values above the chart still expose the hovered candle price.
+          horzLine: { labelVisible: false },
+        },
         rightPriceScale: { borderColor: '#dedee5' },
         timeScale: {
           borderColor: '#dedee5',
@@ -144,6 +160,18 @@ export function MarketChart({
         lastValueVisible: true,
       })
       candleSeries.setData(candleData)
+      for (const priceLine of priceLines) {
+        candleSeries.createPriceLine({
+          price: priceLine.price,
+          color: priceLine.color,
+          lineWidth: 1,
+          lineStyle: priceLine.lineStyle === 'solid'
+            ? charts.LineStyle.Solid
+            : charts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: priceLine.title,
+        })
+      }
 
       for (const overlay of overlays.filter((item) => item.pane === 'price')) {
         const series = chart.addSeries(charts.LineSeries, {
@@ -299,7 +327,7 @@ export function MarketChart({
       disposed = true
       cleanup()
     }
-  }, [candleData, candles, hasMore, labels, locale, onLoadEarlier, overlays, settings, signals])
+  }, [candleData, candles, hasMore, labels, locale, onLoadEarlier, overlays, priceLines, settings, signals])
 
   if (loading && candles.length === 0) {
     return <div className="flex h-[560px] items-center justify-center text-sm text-muted"><LoaderCircle className="mr-2 animate-spin" size={18} />Loading market data</div>

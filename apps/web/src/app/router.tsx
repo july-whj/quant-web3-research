@@ -10,6 +10,7 @@ import { DataPage } from '../pages/DataPage'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { PaperTradingPage } from '../pages/PaperTradingPage'
 import { StrategyPage } from '../pages/StrategyPage'
 
 function RequireSession() {
@@ -43,6 +44,7 @@ export function AppRouter() {
             <Route element={<DataPage />} path="/app/data" />
             <Route element={<StrategyPage />} path="/app/strategies" />
             <Route element={<BacktestPage />} path="/app/backtests" />
+            <Route element={<PaperTradingPage />} path="/app/paper" />
           </Route>
         </Route>
         <Route element={<NotFoundPage />} path="*" />

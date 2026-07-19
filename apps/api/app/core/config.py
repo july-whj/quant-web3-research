@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     database_url: str = "mysql+pymysql://quant:quant@127.0.0.1:3306/quant_web3"
     redis_url: str = "redis://127.0.0.1:6379/0"
     job_mode: str = "inline"
+    paper_engine_poll_seconds: int = 5
     artifact_dir: Path = REPOSITORY_ROOT / "data" / "reports"
 
     collector_exchanges: str = "binance,okx"

@@ -18,7 +18,8 @@
 - `apps/web/`：React、TypeScript、Vite 与 Tailwind CSS 研究工作区，支持简体中文、繁体中文、日文和英文。
 - `apps/api/`：FastAPI、MySQL 8.x、钱包签名登录与研究接口。
 - `apps/collector/`：Binance、OKX 的 BTC/USDT 实时 K 线订阅、REST 补数与缺口检查。
-- `apps/worker/`：通过 Redis/RQ 执行耗时回测任务。
+- `apps/worker/`：通过 Redis/RQ 执行耗时回测任务，并持续撮合模拟限价单与网格订单。
+- `apps/web/src/pages/PaperTradingPage.tsx`：使用 `paper_funds` 的 BTC/USDT 现货模拟交易工作台，不连接真实资金。
 
 ## 快速开始
 
@@ -65,6 +66,14 @@ python scripts/init_db.py
 ```bash
 ./scripts/run_collector.sh
 ```
+
+模拟交易依赖采集器产生的 `1m` 闭合 K 线。再开一个终端启动模拟撮合进程，用于持续处理限价单和网格订单：
+
+```bash
+./scripts/run_paper_engine.sh
+```
+
+登录 Web 工作区后进入“模拟交易”，可以创建 Binance 或 OKX 的 BTC/USDT 模拟账户。账户余额只记录为 `paper_funds`；市价单计入手续费和滑点，限价单按闭合 K 线触价撮合，CEX 模拟成交的 Gas 固定为 0。模拟撮合进程重启后会回放未成交订单创建以来的闭合 K 线，补算停机期间发生的触价。
 
 只执行一次 REST 补数、不保持 WebSocket 连接：
 
@@ -136,6 +145,6 @@ quant-web3-research/
 
 ## 路线图
 
-当前目标是完成一个能被读者检查的研究闭环：获取数据，生成信号，执行回测，扣除成本，计算回撤，输出报告。之后再加入链上事件数据、模拟交易、风险控制和监控。
+当前系统已经覆盖“获取数据—生成信号—执行回测—扣除成本—模拟交易”的研究闭环。下一阶段将继续补充链上事件数据、组合级风险控制、告警和可观测性。
 
 项目采用 MIT License。提交问题或代码前，请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。

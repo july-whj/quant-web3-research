@@ -7,6 +7,7 @@ from .routes import (
     datasets,
     health,
     market,
+    paper,
     strategies,
     strategy_configs,
 )
@@ -19,5 +20,6 @@ api_router.include_router(strategies.router)
 api_router.include_router(strategy_configs.router)
 api_router.include_router(datasets.router)
 api_router.include_router(market.router)
+api_router.include_router(paper.router)
 api_router.include_router(backtests.router)
 api_router.include_router(analytics.router)

@@ -78,6 +78,21 @@ services:
     volumes:
       - research_data:/workspace/data
 
+  paper-engine:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "apps.worker.quant_web3_worker.paper_engine"]
+    environment: *api_environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+      collector:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      - research_data:/workspace/data
+
   collector:
     build:
       context: ..
