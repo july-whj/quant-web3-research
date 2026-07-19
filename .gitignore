@@ -6,6 +6,8 @@ __pycache__/
 .ruff_cache/
 build/
 dist/
+node_modules/
+apps/web/dist/
 
 # Local environments and secrets
 .venv/
@@ -24,6 +26,7 @@ venv/
 
 # Runtime output
 *.log
+*.db
 data/raw/*
 data/processed/*
 data/reports/*

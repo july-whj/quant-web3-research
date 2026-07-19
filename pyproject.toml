@@ -10,17 +10,29 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
+  "alembic>=1.14",
   "ccxt>=4.0",
+  "eth-account>=0.13",
+  "eth-utils>=5.0",
+  "fastapi>=0.115",
   "matplotlib>=3.8",
   "numpy>=1.26",
   "pandas>=2.1",
+  "pyarrow>=18.0",
+  "pydantic-settings>=2.7",
+  "pymysql>=1.1",
   "python-dotenv>=1.0",
   "PyYAML>=6.0",
+  "redis>=5.2",
   "requests>=2.31",
+  "rq>=2.1",
+  "sqlalchemy>=2.0",
+  "uvicorn[standard]>=0.34",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "httpx>=0.28",
   "jupyterlab>=4.0",
   "pytest>=8.0",
   "ruff>=0.6",
@@ -30,7 +42,7 @@ dev = [
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = [".", "src", "apps/api", "apps/worker"]
 testpaths = ["tests"]
 
 [tool.ruff]

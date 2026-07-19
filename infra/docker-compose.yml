@@ -1,0 +1,83 @@
+name: quant-web3-research
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: quant_web3
+      MYSQL_USER: quant
+      MYSQL_PASSWORD: quant
+      MYSQL_ROOT_PASSWORD: local-root-only
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-plocal-root-only"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment: &api_environment
+      DATABASE_URL: mysql+pymysql://quant:quant@mysql:3306/quant_web3
+      REDIS_URL: redis://redis:6379/0
+      JOB_MODE: rq
+      CREATE_TABLES_ON_STARTUP: "true"
+      SIWE_DOMAIN: localhost:8080
+      SIWE_URI: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+      ADMIN_API_KEY: local-development-key
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - report_data:/workspace/data/reports
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "apps.worker.quant_web3_worker.worker"]
+    environment: *api_environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - report_data:/workspace/data/reports
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  mysql_data:
+  redis_data:
+  report_data:
