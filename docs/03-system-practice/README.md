@@ -44,18 +44,17 @@ part: 3
 
 这条流程暂时只做研究、回测和模拟盘，不做真实资金自动交易。
 
-## 第 16 章：开源系统的整体架构与目录设计
+## [第 16 章：开源系统的整体架构与目录设计](16-open-source-system-architecture.md)
+
+状态：书面稿已完成。
 
 系统模块：
 
 ```text
-项目结构
-配置文件
-数据目录
-源码目录
-示例目录
-测试目录
-文档目录
+apps/web、apps/api、apps/worker、apps/collector
+src/quant_web3 可复用研究模块
+MySQL、Redis 与 Parquet 存储边界
+配置、数据、示例、测试和文档目录
 ```
 
 本章要解决的问题：
@@ -69,51 +68,58 @@ part: 3
 最小实验：
 
 ```text
-创建项目目录骨架。
-把现有 metrics.py 整理为可复用模块。
-新增一个 examples/backtest_ma_cross.py 作为命令行示例。
+检查项目目录骨架和模块边界。
+通过命令行分别启动 API、Collector、Worker 和 Web。
+对照书稿、Notebook、Example 与 Test 的职责。
 ```
 
 本章输出：
 
 ```text
-项目目录说明
-模块职责图
-最小运行命令
-README 初稿结构
+实际项目目录说明
+五个运行单元及职责图
+数据存储与配置安全边界
+最小运行命令和开源工程规范
 ```
 
-## 第 17 章：CEX 行情数据模块
+## [第 17 章：CEX 行情数据模块](17-cex-market-data-module.md)
+
+状态：书面稿已完成。
 
 系统模块：
 
 ```text
-src/data/
+apps/collector/
+src/quant_web3/data/
+apps/api/app/models/
+apps/api/app/api/routes/market.py
+apps/web/src/pages/DataPage.tsx
 ```
 
 本章要解决的问题：
 
-- 如何通过 CCXT 获取 CEX K 线。
-- 如何获取成交和订单簿。
-- 如何处理交易所 symbol、时间周期、时区、分页和限流。
-- 如何保存原始数据和清洗后数据。
-- 为什么数据源、时间范围和拉取时间必须记录。
+- 如何结合 WebSocket 与 CCXT REST 持续获取闭合 K 线。
+- 如何处理交易所 symbol、周期、UTC 边界、分页和限流。
+- 如何通过唯一键、采集检查点和缺口扫描补齐数据。
+- 逐笔成交与订单簿为什么不能照搬 K 线补数方式。
+- 为什么连接正常不等于每个周期的数据完整。
 
 最小实验：
 
 ```text
-拉取 BTC/USDT 日线 K 线。
-保存为 CSV。
-读取后检查缺失、重复和时间顺序。
+同时订阅 Binance、OKX 的 BTC/USDT 七种 K 线周期。
+首次启动补齐历史数据，断线和定时巡检自动修复缺口。
+查询记录数、最新闭合时间并检查一分钟数据连续性。
 ```
 
 本章输出：
 
 ```text
-data/raw/
-data/processed/
-CEX 数据字段说明
-数据质量检查函数
+原生 WebSocket 实时订阅
+CCXT REST 初始化与补数
+MySQL 幂等写入与采集检查点
+CEX K 线、成交和订单簿字段说明
+数据完整性检查与真实异常案例
 ```
 
 ## 第 18 章：链上数据模块

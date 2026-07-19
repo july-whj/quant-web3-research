@@ -54,8 +54,8 @@ status: 进行中
 ## 第三部分： Web3 量化实践
 
 - [ ] 第三部分总大纲：[系统实践大纲](03-system-practice/README.md)
-- [ ] 第 16 章：开源系统的整体架构与目录设计
-- [ ] 第 17 章：CEX 行情数据模块：K 线、成交与订单簿
+- [x] 第 16 章：[开源系统的整体架构与目录设计](03-system-practice/16-open-source-system-architecture.md)
+- [x] 第 17 章：[CEX 行情数据模块：K 线、成交与订单簿](03-system-practice/17-cex-market-data-module.md)
 - [ ] 第 18 章：链上数据模块：区块、交易、回执与事件日志
 - [ ] 第 19 章：数据标准化与指标模块：时间序列、Token 与资金流
 - [ ] 第 20 章：策略模块：规则、参数、信号与配置文件

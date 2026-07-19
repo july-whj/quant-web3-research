@@ -10,13 +10,14 @@
 
 ## 现在有什么
 
-- `docs/`：第 1—15 章书稿，以及后续系统实践路线。
+- `docs/`：第 1—17 章书稿，以及后续系统实践路线。
 - `notebooks/`：收益率、复利、时间序列、BTC 行情、双均线、回测和交易成本实验。
 - `src/quant_web3/`：行情、链上 RPC、指标、策略、回测与风险计算的基础模块。
 - `examples/`：可以从命令行运行的最小示例。
 - `tests/`：对核心计算和防未来函数规则的自动检查。
 - `apps/web/`：React、TypeScript、Vite 与 Tailwind CSS 研究工作区，支持简体中文、繁体中文、日文和英文。
 - `apps/api/`：FastAPI、MySQL 8.x、钱包签名登录与研究接口。
+- `apps/collector/`：Binance、OKX 的 BTC/USDT 实时 K 线订阅、REST 补数与缺口检查。
 - `apps/worker/`：通过 Redis/RQ 执行耗时回测任务。
 
 ## 快速开始
@@ -122,7 +123,7 @@ quant-web3-research/
 
 ## 阅读路线
 
-从 [前言](docs/00-preface.md) 和 [学习路线](docs/00-roadmap.md) 开始。量化基础在 `docs/01-quant-basics/`，Web3 基础在 `docs/02-web3-basics/`。第 16—23 章会随着系统模块实现逐步补全，当前计划见 [系统实践大纲](docs/03-system-practice/README.md)。
+从 [前言](docs/00-preface.md) 和 [学习路线](docs/00-roadmap.md) 开始。量化基础在 `docs/01-quant-basics/`，Web3 基础在 `docs/02-web3-basics/`。系统实践部分已经完成 [第 16 章：整体架构与目录设计](docs/03-system-practice/16-open-source-system-architecture.md) 和 [第 17 章：CEX 行情数据模块](docs/03-system-practice/17-cex-market-data-module.md)；后续计划见 [系统实践大纲](docs/03-system-practice/README.md)。
 
 ## 安全边界
 
