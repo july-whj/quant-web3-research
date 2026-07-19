@@ -10,11 +10,26 @@ import type {
 } from 'lightweight-charts'
 
 import { macd, simpleMovingAverage } from './indicators'
-import type { MarketCandle, MarketChartSettings, MarketSignal } from './types'
+import type { MarketCandle, MarketChartSettings } from './types'
+
+export interface ChartSignal {
+  signal_time: string
+  execution_time: string
+  side: 'buy' | 'sell'
+}
+
+export interface ChartOverlay {
+  key: string
+  label: string
+  color: string
+  pane: 'price' | 'indicator'
+  points: Array<{ time: string; value: string | number }>
+}
 
 interface MarketChartProps {
   candles: MarketCandle[]
-  signals: MarketSignal[]
+  signals: ChartSignal[]
+  overlays?: ChartOverlay[]
   settings: MarketChartSettings
   locale: string
   loading: boolean
@@ -53,6 +68,7 @@ function formatPrice(value: number, locale: string) {
 export function MarketChart({
   candles,
   signals,
+  overlays = [],
   settings,
   locale,
   loading,
@@ -129,6 +145,20 @@ export function MarketChart({
       })
       candleSeries.setData(candleData)
 
+      for (const overlay of overlays.filter((item) => item.pane === 'price')) {
+        const series = chart.addSeries(charts.LineSeries, {
+          color: overlay.color,
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+        })
+        series.setData(overlay.points.map((point) => ({
+          time: unixTime(point.time),
+          value: Number(point.value),
+        })))
+      }
+
       if (settings.fastMa) {
         const series = chart.addSeries(charts.LineSeries, {
           color: '#4c6fff',
@@ -187,6 +217,25 @@ export function MarketChart({
           value: point.histogram,
           color: point.histogram >= 0 ? 'rgba(15, 157, 114, 0.52)' : 'rgba(224, 93, 93, 0.5)',
         })))
+        nextPane += 1
+      }
+
+      const indicatorOverlays = overlays.filter((item) => item.pane === 'indicator')
+      if (indicatorOverlays.length) {
+        const indicatorPane = nextPane
+        for (const overlay of indicatorOverlays) {
+          const series = chart.addSeries(charts.LineSeries, {
+            color: overlay.color,
+            lineWidth: 2,
+            priceLineVisible: false,
+            lastValueVisible: false,
+          }, indicatorPane)
+          series.setData(overlay.points.map((point) => ({
+            time: unixTime(point.time),
+            value: Number(point.value),
+          })))
+        }
+        nextPane += 1
       }
 
       const availableTimes = new Set(candleData.map((candle) => candle.time))
@@ -218,8 +267,9 @@ export function MarketChart({
 
       const panes = chart.panes()
       panes[0]?.setStretchFactor(4)
-      if (settings.volume) panes[1]?.setStretchFactor(0.9)
-      if (settings.macd) panes[nextPane]?.setStretchFactor(1.35)
+      for (let paneIndex = 1; paneIndex < nextPane; paneIndex += 1) {
+        panes[paneIndex]?.setStretchFactor(1.1)
+      }
 
       const handleCrosshair = (param: Parameters<typeof chart.subscribeCrosshairMove>[0] extends (event: infer E) => void ? E : never) => {
         const value = param.seriesData.get(candleSeries) as CandlestickData<UTCTimestamp> | undefined
@@ -249,7 +299,7 @@ export function MarketChart({
       disposed = true
       cleanup()
     }
-  }, [candleData, candles, hasMore, labels, locale, onLoadEarlier, settings, signals])
+  }, [candleData, candles, hasMore, labels, locale, onLoadEarlier, overlays, settings, signals])
 
   if (loading && candles.length === 0) {
     return <div className="flex h-[560px] items-center justify-center text-sm text-muted"><LoaderCircle className="mr-2 animate-spin" size={18} />Loading market data</div>
@@ -268,6 +318,16 @@ export function MarketChart({
           <span><b className="font-medium text-muted">{labels.close}</b> {formatPrice(latest.close, locale)}</span>
         </>}
       </div>
+      {overlays.length > 0 && (
+        <div className="pointer-events-none absolute right-4 top-3 z-10 flex max-w-[46%] flex-wrap justify-end gap-2 rounded-lg bg-white/88 px-2 py-1 text-[10px] shadow-sm backdrop-blur">
+          {overlays.map((overlay) => (
+            <span className="inline-flex items-center gap-1" key={overlay.key}>
+              <i className="size-2 rounded-full" style={{ backgroundColor: overlay.color }} />
+              {overlay.label}
+            </span>
+          ))}
+        </div>
+      )}
       {loadingEarlier && <div className="absolute left-1/2 top-14 z-10 -translate-x-1/2 rounded-full border border-line bg-white px-3 py-1 text-xs text-muted shadow-sm"><LoaderCircle className="mr-1 inline animate-spin" size={13} />Loading</div>}
       <div className="h-[560px] w-full" ref={containerRef} />
     </div>

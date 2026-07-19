@@ -1,5 +1,12 @@
 from .auth import AuthChallenge, LoginEvent, User, UserSession, UserWallet
-from .research import BacktestRun, Dataset, IngestionCheckpoint, MarketCandle
+from .research import (
+    BacktestRun,
+    Dataset,
+    IngestionCheckpoint,
+    MarketCandle,
+    StrategyConfig,
+    StrategyConfigVersion,
+)
 
 __all__ = [
     "AuthChallenge",
@@ -8,6 +15,8 @@ __all__ = [
     "LoginEvent",
     "IngestionCheckpoint",
     "MarketCandle",
+    "StrategyConfig",
+    "StrategyConfigVersion",
     "User",
     "UserSession",
     "UserWallet",

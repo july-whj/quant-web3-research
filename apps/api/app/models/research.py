@@ -115,17 +115,68 @@ class IngestionCheckpoint(Base):
     )
 
 
+class StrategyConfig(Base):
+    __tablename__ = "strategy_configs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_string)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    latest_version_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class StrategyConfigVersion(Base):
+    __tablename__ = "strategy_config_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "config_id",
+            "version_number",
+            name="ux_strategy_config_version_number",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_string)
+    config_id: Mapped[str] = mapped_column(
+        ForeignKey("strategy_configs.id", ondelete="CASCADE"), index=True
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    strategy_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    strategy_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    exchange: Mapped[str] = mapped_column(String(32), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(12), nullable=False)
+    days: Mapped[int] = mapped_column(Integer, nullable=False)
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    risk_config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    execution_config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class BacktestRun(Base):
     __tablename__ = "backtest_runs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_string)
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     strategy_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    strategy_version: Mapped[str] = mapped_column(String(32), default="1.0.0", nullable=False)
+    strategy_config_version_id: Mapped[str | None] = mapped_column(
+        ForeignKey("strategy_config_versions.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    exchange: Mapped[str] = mapped_column(String(32), default="binance", nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
     timeframe: Mapped[str] = mapped_column(String(12), nullable=False)
     days: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
     parameters: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    risk_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    execution_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    data_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     artifact_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

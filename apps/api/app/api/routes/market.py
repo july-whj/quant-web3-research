@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from quant_web3.strategies import strategy_registry
+
 from ...db.session import get_db
 from ...models import IngestionCheckpoint, MarketCandle, User, UserSession, UserWallet
 from ...schemas.research import (
@@ -19,7 +21,6 @@ from ...schemas.research import (
     MarketStreamResponse,
 )
 from ..dependencies import get_current_identity
-from quant_web3.strategies.ma_cross import generate_ma_cross_signals
 
 
 router = APIRouter(prefix="/market", tags=["market data"])
@@ -149,7 +150,7 @@ def list_market_signals(
     timeframe: MarketTimeframe = "1h",
     limit: int = Query(default=500, ge=50, le=2000),
     before: datetime | None = None,
-    fast_window: int = Query(default=20, ge=2, le=499),
+    fast_window: int = Query(default=20, ge=2, le=200),
     slow_window: int = Query(default=60, ge=3, le=500),
     db: Session = Depends(get_db),
     _: tuple[User, UserWallet, UserSession] = Depends(get_current_identity),
@@ -170,16 +171,22 @@ def list_market_signals(
     signals: list[MarketSignalItem] = []
 
     if candles:
-        close = pd.Series(
-            [float(candle.close) for candle in candles],
-            index=pd.DatetimeIndex([_as_utc(candle.open_time) for candle in candles]),
-            dtype="float64",
+        index = pd.DatetimeIndex([_as_utc(candle.open_time) for candle in candles])
+        candle_frame = pd.DataFrame(
+            {
+                "open": [float(candle.open) for candle in candles],
+                "high": [float(candle.high) for candle in candles],
+                "low": [float(candle.low) for candle in candles],
+                "close": [float(candle.close) for candle in candles],
+                "volume": [float(candle.volume) for candle in candles],
+            },
+            index=index,
         )
-        signal_frame = generate_ma_cross_signals(
-            close,
-            fast_window=fast_window,
-            slow_window=slow_window,
+        strategy, parameters = strategy_registry.validate_parameters(
+            "ma_cross_long_only",
+            {"fast_window": fast_window, "slow_window": slow_window},
         )
+        signal_frame = strategy.generate_signals(candle_frame, parameters)
         for index in range(1, len(candles)):
             trade = signal_frame["trade"].iloc[index]
             if pd.isna(trade) or float(trade) == 0:

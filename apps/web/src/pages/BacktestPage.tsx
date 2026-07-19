@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Beaker, CheckCircle2, Clock3, LoaderCircle, Play, RefreshCw } from 'lucide-react'
+import { AlertCircle, Beaker, CheckCircle2, Clock3, GitCompareArrows, LoaderCircle, Play, RefreshCw, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { createBacktest, listBacktests } from '../features/backtests/api'
-import { currentLanguage } from '../i18n'
+import { currentLanguage, type AppLanguage } from '../i18n'
 import { formatDateTime, formatPercent } from '../lib/format'
 
 export function BacktestPage() {
@@ -14,12 +14,20 @@ export function BacktestPage() {
   const [slowWindow, setSlowWindow] = useState(60)
   const [days, setDays] = useState(365)
   const [formError, setFormError] = useState('')
+  const [comparisonIds, setComparisonIds] = useState<string[]>([])
   const queryClient = useQueryClient()
   const runs = useQuery({ queryKey: ['backtests'], queryFn: listBacktests, refetchInterval: 5000 })
   const createRun = useMutation({
     mutationFn: createBacktest,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['backtests'] }),
   })
+  const comparisonRuns = (runs.data ?? []).filter((run) => comparisonIds.includes(run.id))
+
+  function toggleComparison(runId: string) {
+    setComparisonIds((current) => current.includes(runId)
+      ? current.filter((id) => id !== runId)
+      : [...current.slice(-2), runId])
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -30,10 +38,19 @@ export function BacktestPage() {
     }
     createRun.mutate({
       strategy_name: 'ma_cross_long_only',
+      strategy_version: '1.0.0',
+      exchange: 'binance',
       symbol: 'BTC/USDT',
       timeframe: '1d',
       days,
-      parameters: { fast_window: fastWindow, slow_window: slowWindow, fee_rate: 0.001, slippage_rate: 0.0005 },
+      parameters: { fast_window: fastWindow, slow_window: slowWindow },
+      execution: {
+        initial_capital: 1000,
+        fee_rate: 0.001,
+        slippage_rate: 0.0005,
+        signal_on: 'candle_close',
+        execute_on: 'next_candle_open',
+      },
     })
   }
 
@@ -67,10 +84,10 @@ export function BacktestPage() {
               const returnValue = run.summary?.strategy_total_return
               const drawdown = run.summary?.strategy_max_drawdown
               return (
-                <article className="grid gap-4 px-5 py-5 sm:grid-cols-[1.15fr_0.8fr_auto] sm:items-center sm:px-7" key={run.id}>
-                  <div><div className="flex items-center gap-2"><strong className="text-sm">MA {String(run.parameters.fast_window)} / {String(run.parameters.slow_window)}</strong><StatusBadge status={run.status} /></div><p className="mt-1.5 text-xs text-muted">BTC/USDT · 1d · {formatDateTime(run.created_at, language)}</p></div>
+                <article className={`grid gap-4 px-5 py-5 sm:grid-cols-[1.15fr_0.8fr_auto] sm:items-center sm:px-7 ${comparisonIds.includes(run.id) ? 'bg-[#faf8ff]' : ''}`} key={run.id}>
+                  <div><div className="flex items-center gap-2"><strong className="text-sm">MA {String(run.parameters.fast_window)} / {String(run.parameters.slow_window)}</strong><StatusBadge status={run.status} /></div><p className="mt-1.5 text-xs text-muted">{run.exchange.toUpperCase()} · {run.symbol} · {run.timeframe} · {formatDateTime(run.created_at, language)}</p></div>
                   <div className="grid grid-cols-2 gap-4 text-sm"><span><small className="block text-xs text-muted">{t('backtest.totalReturn')}</small><strong className="mt-1 block">{returnValue === undefined ? '—' : formatPercent(returnValue, language)}</strong></span><span><small className="block text-xs text-muted">{t('backtest.maxDrawdown')}</small><strong className="mt-1 block">{drawdown === undefined ? '—' : formatPercent(drawdown, language)}</strong></span></div>
-                  <code className="text-[11px] text-silver">{run.id.slice(0, 8)}</code>
+                  <div className="flex items-center justify-end gap-2"><code className="text-[11px] text-silver">{run.id.slice(0, 8)}</code>{run.status === 'succeeded' && <button aria-label={t('backtest.addComparison')} className={`grid size-8 place-items-center rounded-lg border ${comparisonIds.includes(run.id) ? 'border-brand bg-brand text-white' : 'border-line text-muted hover:border-brand hover:text-brand'}`} onClick={() => toggleComparison(run.id)} type="button"><GitCompareArrows size={14} /></button>}</div>
                   {run.error_message && <p className="text-xs text-red-700 sm:col-span-3">{run.error_message}</p>}
                 </article>
               )
@@ -80,8 +97,17 @@ export function BacktestPage() {
           </div>
         </div>
       </section>
+
+      {comparisonRuns.length > 0 && <section className="research-card mt-5 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-7"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[#f0ecfe] text-brand"><GitCompareArrows size={17} /></span><div><h2 className="text-sm font-bold">{t('backtest.comparisonTitle')}</h2><p className="mt-0.5 text-xs text-muted">{t('backtest.comparisonHint')}</p></div></div><button className="grid size-8 place-items-center rounded-lg text-muted hover:bg-[#f1f1f4]" onClick={() => setComparisonIds([])} type="button"><X size={15} /></button></div>
+        <div className="overflow-x-auto p-5 sm:p-7"><table className="w-full min-w-[720px] border-collapse text-left text-xs"><thead><tr className="border-b border-line text-muted"><th className="pb-3 font-medium">{t('backtest.metric')}</th>{comparisonRuns.map((run) => <th className="pb-3 font-medium" key={run.id}><span className="block text-ink">{run.strategy_name}</span><code>{run.id.slice(0, 8)}</code></th>)}</tr></thead><tbody><ComparisonRow label={t('backtest.totalReturn')} language={language} runs={comparisonRuns} summaryKey="strategy_total_return" /><ComparisonRow label={t('backtest.benchmarkReturn')} language={language} runs={comparisonRuns} summaryKey="benchmark_total_return" /><ComparisonRow label={t('backtest.maxDrawdown')} language={language} runs={comparisonRuns} summaryKey="strategy_max_drawdown" /><ComparisonRow label={t('backtest.tradeCount')} runs={comparisonRuns} summaryKey="trade_count" /><tr className="border-b border-line/70"><th className="py-3 font-medium text-muted">{t('backtest.configurationSource')}</th>{comparisonRuns.map((run) => <td className="py-3" key={run.id}>{run.strategy_config_version_id ? <code>{run.strategy_config_version_id.slice(0, 8)}</code> : t('backtest.temporaryParameters')}</td>)}</tr></tbody></table></div>
+      </section>}
     </div>
   )
+}
+
+function ComparisonRow({ label, runs, summaryKey, language }: { label: string; runs: import('../types').BacktestRun[]; summaryKey: string; language?: AppLanguage }) {
+  return <tr className="border-b border-line/70"><th className="py-3 font-medium text-muted">{label}</th>{runs.map((run) => { const value = run.summary?.[summaryKey]; return <td className="py-3 font-semibold" key={run.id}>{value === undefined ? '—' : language && summaryKey !== 'trade_count' ? formatPercent(value, language) : value}</td> })}</tr>
 }
 
 function StatusBadge({ status }: { status: string }) {

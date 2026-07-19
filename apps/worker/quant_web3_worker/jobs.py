@@ -4,23 +4,69 @@ from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from apps.api.app.core.config import get_settings
 from apps.api.app.db.session import SessionLocal
-from apps.api.app.models import BacktestRun
+from apps.api.app.models import BacktestRun, MarketCandle
+from apps.api.app.services.market_data import as_utc, require_closed_candle_coverage
 from quant_web3.backtest import run_long_only_backtest
 from quant_web3.reporting import summarize_backtest
-from quant_web3.strategies import generate_ma_cross_signals
+from quant_web3.strategies import strategy_registry
 
 
-def deterministic_close_series(days: int) -> pd.Series:
-    """Build repeatable demo candles until an exchange dataset is selected."""
-    dates = pd.date_range(end=pd.Timestamp.now(tz="UTC").normalize(), periods=days, freq="D")
-    x = np.arange(days, dtype=float)
-    trend = 50_000 + x * 52
-    cycle = 4_800 * np.sin(x / 18.0) + 1_900 * np.sin(x / 5.4)
-    close = np.maximum(trend + cycle, 1.0)
-    return pd.Series(close, index=dates, name="close")
+def load_market_candles(db: Session, run: BacktestRun) -> tuple[pd.DataFrame, dict[str, object]]:
+    stream_filters = (
+        MarketCandle.exchange == run.exchange,
+        MarketCandle.symbol == run.symbol,
+        MarketCandle.timeframe == run.timeframe,
+        MarketCandle.is_closed.is_(True),
+    )
+    strategy = strategy_registry.get(run.strategy_name, run.strategy_version)
+    parameters = strategy.spec.validate_parameters(run.parameters)
+    minimum_bars = strategy.spec.required_warmup_bars(parameters) + 2
+    coverage = require_closed_candle_coverage(
+        db,
+        exchange=run.exchange,
+        symbol=run.symbol,
+        timeframe=run.timeframe,
+        days=run.days,
+        minimum_bars=minimum_bars,
+    )
+    rows = list(
+        db.scalars(
+            select(MarketCandle)
+            .where(*stream_filters, MarketCandle.open_time >= coverage.requested_start)
+            .order_by(MarketCandle.open_time.asc())
+        ).all()
+    )
+
+    index = pd.DatetimeIndex([as_utc(row.open_time) for row in rows], name="timestamp")
+    candles = pd.DataFrame(
+        {
+            "open": [float(row.open) for row in rows],
+            "high": [float(row.high) for row in rows],
+            "low": [float(row.low) for row in rows],
+            "close": [float(row.close) for row in rows],
+            "volume": [float(row.volume) for row in rows],
+        },
+        index=index,
+    )
+    snapshot: dict[str, object] = {
+        "exchange": run.exchange,
+        "symbol": run.symbol,
+        "timeframe": run.timeframe,
+        "requested_days": run.days,
+        "requested_start_time": coverage.requested_start.isoformat(),
+        "start_time": coverage.first_open_time.isoformat(),
+        "end_time": as_utc(rows[-1].open_time).isoformat(),
+        "candle_count": len(rows),
+        "expected_candle_count": coverage.expected_candle_count,
+        "gap_count": coverage.expected_candle_count - len(rows),
+        "closed_candles_only": True,
+    }
+    return candles, snapshot
 
 
 def run_backtest_job(run_id: str) -> None:
@@ -34,17 +80,21 @@ def run_backtest_job(run_id: str) -> None:
         db.commit()
 
         try:
-            close = deterministic_close_series(run.days)
-            signals = generate_ma_cross_signals(
-                close,
-                fast_window=int(run.parameters["fast_window"]),
-                slow_window=int(run.parameters["slow_window"]),
-            )
+            strategy = strategy_registry.get(run.strategy_name, run.strategy_version)
+            parameters = strategy.spec.validate_parameters(run.parameters)
+            candles, data_snapshot = load_market_candles(db, run)
+            signals = strategy.generate_signals(candles, parameters)
+            execution = run.execution_config or {}
+            risk = run.risk_config or {}
+            max_position_pct = float(risk.get("max_position_pct", 1.0))
+            position = signals["position"] * max_position_pct
             result = run_long_only_backtest(
-                close,
-                signals["position"],
-                fee_rate=float(run.parameters["fee_rate"]),
-                slippage_rate=float(run.parameters["slippage_rate"]),
+                candles["close"],
+                position,
+                open_prices=candles["open"],
+                initial_capital=float(execution.get("initial_capital", 1000.0)),
+                fee_rate=float(execution.get("fee_rate", 0.001)),
+                slippage_rate=float(execution.get("slippage_rate", 0.0005)),
             )
             summary = summarize_backtest(result)
             summary["strategy_total_return"] = float(summary["strategy_return"])
@@ -62,6 +112,7 @@ def run_backtest_job(run_id: str) -> None:
             result.to_parquet(artifact_path)
 
             run.summary = summary
+            run.data_snapshot = data_snapshot
             run.artifact_path = str(artifact_path.relative_to(settings.artifact_dir.parent.parent))
             run.status = "succeeded"
             run.finished_at = datetime.now(UTC)
