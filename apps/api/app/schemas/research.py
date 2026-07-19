@@ -71,6 +71,21 @@ class DatasetResponse(BaseModel):
     created_at: datetime
 
 
+class MarketStreamResponse(BaseModel):
+    exchange: str
+    symbol: str
+    timeframe: str
+    status: str
+    row_count: int
+    last_closed_open_time: datetime | None
+    last_received_at: datetime | None
+    last_persisted_at: datetime | None
+    last_backfill_at: datetime | None
+    reconnect_count: int
+    backfilled_candles: int
+    last_error: str | None
+
+
 class UsageSummary(BaseModel):
     users: int
     wallets: int

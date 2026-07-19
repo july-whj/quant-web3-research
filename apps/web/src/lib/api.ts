@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
 export class ApiError extends Error {
@@ -26,7 +28,7 @@ export async function apiRequest<T>(
     const payload = (await response.json().catch(() => null)) as
       | { detail?: string }
       | null
-    throw new ApiError(payload?.detail ?? '请求失败，请稍后重试', response.status)
+    throw new ApiError(payload?.detail ?? i18n.t('common.requestFailed'), response.status)
   }
 
   if (response.status === 204) {

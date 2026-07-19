@@ -40,6 +40,15 @@ body {
   background: #ffffff;
 }
 
+:lang(zh-CN),
+:lang(zh-TW) {
+  font-family: "IBM Plex Sans", "PingFang SC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+:lang(ja) {
+  font-family: "IBM Plex Sans", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+
 button,
 input,
 select,

@@ -45,3 +45,18 @@ export interface DatasetRecord {
   row_count: number
   created_at: string
 }
+
+export interface MarketStreamRecord {
+  exchange: string
+  symbol: string
+  timeframe: string
+  status: 'starting' | 'connecting' | 'live' | 'degraded' | 'disconnected'
+  row_count: number
+  last_closed_open_time: string | null
+  last_received_at: string | null
+  last_persisted_at: string | null
+  last_backfill_at: string | null
+  reconnect_count: number
+  backfilled_candles: number
+  last_error: string | null
+}

@@ -15,7 +15,7 @@
 - `src/quant_web3/`：行情、链上 RPC、指标、策略、回测与风险计算的基础模块。
 - `examples/`：可以从命令行运行的最小示例。
 - `tests/`：对核心计算和防未来函数规则的自动检查。
-- `apps/web/`：React、TypeScript、Vite 与 Tailwind CSS 研究工作区。
+- `apps/web/`：React、TypeScript、Vite 与 Tailwind CSS 研究工作区，支持简体中文、繁体中文、日文和英文。
 - `apps/api/`：FastAPI、MySQL 8.x、钱包签名登录与研究接口。
 - `apps/worker/`：通过 Redis/RQ 执行耗时回测任务。
 
@@ -59,6 +59,20 @@ python scripts/init_db.py
 ./scripts/run_api.sh
 ```
 
+另开一个终端启动 BTC/USDT 行情采集服务。采集器同时订阅 Binance 和 OKX，并在启动、重连和定时巡检时自动补齐已闭合 K 线：
+
+```bash
+./scripts/run_collector.sh
+```
+
+只执行一次 REST 补数、不保持 WebSocket 连接：
+
+```bash
+python -m apps.collector.quant_web3_collector.main --once
+```
+
+采集器默认处理 `1m、5m、15m、1h、4h、1d、1w` 七种周期，并且只持久化已经闭合的 K 线。每条记录使用“交易所 + 交易对 + 周期 + 开盘时间”作为唯一身份；重复消息会更新同一行，不会产生重复数据。启动、断线重连和每 60 秒巡检时，采集器都会通过 CCXT REST 检查最近一段时间的缺口并自动回补。登录后可通过 `GET /api/v1/market/streams` 查看每条数据流的进度、记录数与异常状态。
+
 ```bash
 cd apps/web
 npm install
@@ -66,6 +80,8 @@ npm run dev
 ```
 
 浏览器打开 `http://localhost:5173`。本地默认使用同步回测模式，不需要单独启动 Worker。需要验证完整队列时，把 `.env` 中的 `JOB_MODE` 改为 `rq`，然后运行：
+
+前端会优先使用用户上次选择的语言；首次访问时根据浏览器语言在简体中文、繁体中文、日文和英文之间自动匹配，无法匹配时使用简体中文。语言资源集中在 `apps/web/src/i18n/locales/`，新增界面文案时应同步维护四种语言。
 
 ```bash
 ./scripts/run_worker.sh
@@ -90,6 +106,7 @@ quant-web3-research/
 ├── apps/web/             # React 研究工作区
 ├── apps/api/             # FastAPI 接口与数据库模型
 ├── apps/worker/          # Redis/RQ 回测任务
+├── apps/collector/       # Binance/OKX 实时行情与缺口修复
 ├── docs/                 # 书稿和研究说明
 ├── notebooks/            # 按章节组织的实验
 ├── src/quant_web3/       # 可复用 Python 包

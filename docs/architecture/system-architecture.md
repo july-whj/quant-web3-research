@@ -4,7 +4,7 @@
 
 Quant Web3 Research 的首要目标，是把行情获取、策略定义、回测和风险评估组成一条可以重复执行的研究链路。系统默认不接入真实账户下单，不在服务端保存私钥，也不把回测收益包装成投资承诺。
 
-首版由四个运行单元组成：
+首版由五个运行单元组成：
 
 ```text
 React Web ──HTTP/Cookie──> FastAPI ──SQL──> MySQL 8.x
@@ -14,11 +14,16 @@ React Web ──HTTP/Cookie──> FastAPI ──SQL──> MySQL 8.x
                               └────────────> quant_web3 核心包
                                                │
                                                └──> Parquet 回测产物
+
+Binance/OKX ──WebSocket──> Collector ──幂等写入──> MySQL 热行情
+      └────────REST 回补/缺口修复───────────────┘
 ```
 
 ## 2. 前端边界
 
-`apps/web` 使用 React、TypeScript、Vite 和 Tailwind CSS。前端负责钱包连接、研究参数编辑、任务状态与结果可视化，不在浏览器内保存私钥或交易所 Secret。
+`apps/web` 使用 React、TypeScript、Vite、Tailwind CSS、i18next 和 react-i18next。前端负责钱包连接、研究参数编辑、任务状态与结果可视化，不在浏览器内保存私钥或交易所 Secret。
+
+界面内置简体中文（`zh-CN`）、繁体中文（`zh-TW`）、日文（`ja`）和英文（`en`）。静态语言资源随前端一同构建，语言选择保存在浏览器本地存储中；首次访问根据浏览器语言匹配，未命中时回退到简体中文。日期和百分比也使用当前语言的 `Intl` 规则格式化。
 
 页面按研究流程组织：
 
@@ -36,9 +41,11 @@ React Web ──HTTP/Cookie──> FastAPI ──SQL──> MySQL 8.x
 
 `apps/worker` 是 RQ 任务进程。开发环境可以设置 `JOB_MODE=inline`，在 API 进程内同步完成小规模演示；部署环境使用 `JOB_MODE=rq`，由 Redis 分发任务，避免长时间回测阻塞 HTTP 请求。
 
+`apps/collector` 是独立行情采集进程。它通过 Binance 和 OKX 的原生 WebSocket 同时订阅 BTC/USDT 已闭合 K 线，使用交易所、交易对、周期与开盘时间组成的唯一键原子更新。进程启动、WebSocket 重连和定时巡检都会读取持久化检查点，通过 CCXT REST 接口补齐时间缺口。Binance REST 被限定为现货数据端点，OKX 日线和周线统一使用 UTC 边界，避免不同产品线或时区造成的数据混合。
+
 ## 4. 数据存储
 
-MySQL 8.x 只保存需要查询和关联的元数据：用户、钱包、登录挑战、会话、数据集索引、回测状态、参数和摘要。完整 K 线、净值序列和逐笔结果保存为 Parquet 文件，避免把大体量时间序列塞进关系数据库。
+MySQL 8.x 保存需要即时查询和关联的数据：用户、钱包、登录挑战、会话、数据集索引、采集检查点、近期闭合 K 线、回测状态、参数和摘要。实时行情先进入 MySQL 热数据层，以支持唯一键去重与缺口检查；完整历史 K 线后续按时间分区归档为 Parquet。净值序列和逐笔回测结果继续保存为 Parquet 文件。
 
 Redis 只承担队列和短期缓存，不作为用户、会话或回测结果的唯一数据源。
 

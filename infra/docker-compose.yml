@@ -21,6 +21,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
     ports:
       - "6379:6379"
     volumes:
@@ -44,6 +45,10 @@ services:
       SIWE_URI: http://localhost:8080
       CORS_ORIGINS: http://localhost:8080,http://localhost:5173
       ADMIN_API_KEY: local-development-key
+      COLLECTOR_EXCHANGES: binance,okx
+      COLLECTOR_SYMBOL: BTC/USDT
+      COLLECTOR_TIMEFRAMES: 1m,5m,15m,1h,4h,1d,1w
+      BINANCE_REST_URL: https://data-api.binance.vision/api/v3
     depends_on:
       mysql:
         condition: service_healthy
@@ -52,7 +57,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - report_data:/workspace/data/reports
+      - research_data:/workspace/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   worker:
     build:
@@ -66,7 +76,22 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - report_data:/workspace/data/reports
+      - research_data:/workspace/data
+
+  collector:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "apps.collector.quant_web3_collector.main"]
+    environment: *api_environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - research_data:/workspace/data
 
   web:
     build:
@@ -80,4 +105,4 @@ services:
 volumes:
   mysql_data:
   redis_data:
-  report_data:
+  research_data:

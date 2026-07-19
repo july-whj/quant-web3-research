@@ -1,4 +1,5 @@
 import { LoaderCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
 import { AppShell } from '../components/AppShell'
@@ -13,11 +14,12 @@ import { StrategyPage } from '../pages/StrategyPage'
 
 function RequireSession() {
   const session = useSession()
+  const { t } = useTranslation()
 
   if (session.isPending) {
     return (
       <div className="grid min-h-screen place-items-center bg-[#f8f8fb] text-muted">
-        <span className="flex items-center gap-2"><LoaderCircle className="animate-spin" size={18} />正在恢复研究会话</span>
+        <span className="flex items-center gap-2"><LoaderCircle className="animate-spin" size={18} />{t('common.restoreSession')}</span>
       </div>
     )
   }

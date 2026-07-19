@@ -5,6 +5,7 @@ import '@fontsource/ibm-plex-sans/700.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import './i18n'
 import { AppProviders } from './app/providers'
 import { AppRouter } from './app/router'
 import './styles.css'

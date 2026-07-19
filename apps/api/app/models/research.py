@@ -2,9 +2,22 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db.base import Base
@@ -25,6 +38,81 @@ class Dataset(Base):
     row_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     artifact_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MarketCandle(Base):
+    """A finalized exchange candle used as the durable hot-data layer."""
+
+    __tablename__ = "market_candles"
+    __table_args__ = (
+        UniqueConstraint(
+            "exchange",
+            "symbol",
+            "timeframe",
+            "open_time",
+            name="ux_market_candle_identity",
+        ),
+        Index(
+            "ix_market_candles_stream_time",
+            "exchange",
+            "symbol",
+            "timeframe",
+            "open_time",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_string)
+    exchange: Mapped[str] = mapped_column(String(32), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(12), nullable=False)
+    open_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    close_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    open: Mapped[Decimal] = mapped_column(Numeric(30, 12), nullable=False)
+    high: Mapped[Decimal] = mapped_column(Numeric(30, 12), nullable=False)
+    low: Mapped[Decimal] = mapped_column(Numeric(30, 12), nullable=False)
+    close: Mapped[Decimal] = mapped_column(Numeric(30, 12), nullable=False)
+    volume: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    trade_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_closed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    source_event_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class IngestionCheckpoint(Base):
+    """Durable progress and health information for one exchange stream."""
+
+    __tablename__ = "ingestion_checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "exchange",
+            "symbol",
+            "timeframe",
+            name="ux_ingestion_checkpoint_stream",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_string)
+    exchange: Mapped[str] = mapped_column(String(32), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(12), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="starting", nullable=False)
+    last_closed_open_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_event_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_persisted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_backfill_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reconnect_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    backfilled_candles: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class BacktestRun(Base):

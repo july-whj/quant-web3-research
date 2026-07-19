@@ -1,6 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
+import type { TFunction } from 'i18next'
 import { Check, LoaderCircle, LogOut, ShieldCheck, Wallet, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useConnect,
   useConnection,
@@ -10,6 +12,7 @@ import {
 } from 'wagmi'
 
 import { shortenAddress } from '../../lib/format'
+import { ApiError } from '../../lib/api'
 import { createAuthChallenge, logout, verifyWalletSignature } from './api'
 import { sessionQueryKey, useSession } from './useSession'
 
@@ -17,9 +20,10 @@ interface WalletLoginButtonProps {
   compact?: boolean
 }
 
-function readableError(error: unknown) {
-  if (!(error instanceof Error)) return '钱包登录失败，请稍后重试。'
-  if (error.message.toLowerCase().includes('rejected')) return '你取消了钱包操作。'
+function readableError(error: unknown, t: TFunction) {
+  if (!(error instanceof Error)) return t('wallet.errorGeneric')
+  if (error.message.toLowerCase().includes('rejected')) return t('wallet.errorRejected')
+  if (error instanceof ApiError) return t('wallet.errorServer')
   return error.message
 }
 
@@ -27,6 +31,7 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const { t } = useTranslation()
   const connection = useConnection()
   const connectors = useConnectors()
   const connect = useConnect()
@@ -46,16 +51,16 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
   async function authenticate(address: `0x${string}`, chainId: number) {
     setErrorMessage('')
     try {
-      setStep('正在生成一次性登录消息')
+      setStep(t('wallet.stepChallenge'))
       const challenge = await createAuthChallenge(address, chainId)
-      setStep('请在钱包中签名')
+      setStep(t('wallet.stepSign'))
       const signature = await signMessage.mutateAsync({ message: challenge.message })
-      setStep('正在验证签名')
+      setStep(t('wallet.stepVerify'))
       await verifyWalletSignature(address, challenge.message, signature)
       await queryClient.invalidateQueries({ queryKey: sessionQueryKey })
       setIsOpen(false)
     } catch (error) {
-      setErrorMessage(readableError(error))
+      setErrorMessage(readableError(error, t))
     } finally {
       setStep('')
     }
@@ -64,11 +69,11 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
   async function connectAndAuthenticate(connector: (typeof availableConnectors)[number]) {
     setErrorMessage('')
     try {
-      setStep('正在连接钱包')
+      setStep(t('wallet.stepConnect'))
       const result = await connect.mutateAsync({ connector })
       await authenticate(result.accounts[0], result.chainId)
     } catch (error) {
-      setErrorMessage(readableError(error))
+      setErrorMessage(readableError(error, t))
       setStep('')
     }
   }
@@ -90,15 +95,15 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
   return (
     <>
       <button
-        className={session.data ? 'button-outline' : 'button-primary'}
+        className={`${session.data ? 'button-outline' : 'button-primary'} whitespace-nowrap`}
         onClick={handlePrimaryClick}
         disabled={isBusy}
         type="button"
       >
         {isBusy ? <LoaderCircle className="animate-spin" size={17} /> : session.data ? <LogOut size={17} /> : <Wallet size={17} />}
         {session.data
-          ? compact ? '退出' : shortenAddress(session.data.address)
-          : compact ? '登录' : '连接钱包登录'}
+          ? compact ? t('wallet.logout') : shortenAddress(session.data.address)
+          : compact ? t('wallet.login') : t('wallet.connect')}
       </button>
 
       {isOpen && (
@@ -111,13 +116,13 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="eyebrow">Wallet access</p>
+                <p className="eyebrow">{t('wallet.access')}</p>
                 <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em]" id="wallet-dialog-title">
-                  用钱包证明“这是你”
+                  {t('wallet.title')}
                 </h2>
               </div>
               <button
-                aria-label="关闭"
+                aria-label={t('common.close')}
                 className="grid size-10 place-items-center rounded-xl border border-line text-muted hover:bg-[#f6f5fb]"
                 onClick={() => setIsOpen(false)}
                 type="button"
@@ -127,7 +132,7 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
             </div>
 
             <p className="mt-3 text-sm leading-6 text-muted">
-              登录只需要签署一次性文本消息，不会发起链上交易，也不会要求授权资产。
+              {t('wallet.description')}
             </p>
 
             <div className="mt-6 grid gap-3">
@@ -145,7 +150,7 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
                     </span>
                     {connector.name}
                   </span>
-                  <span className="text-xs text-muted">BSC / EVM</span>
+                  <span className="text-xs text-muted">{t('wallet.network')}</span>
                 </button>
               ))}
             </div>
@@ -163,8 +168,8 @@ export function WalletLoginButton({ compact = false }: WalletLoginButtonProps) {
             )}
 
             <div className="mt-6 grid grid-cols-2 gap-3 border-t border-line pt-5 text-xs text-muted">
-              <span className="flex items-center gap-2"><Check size={14} className="text-success" />不读取私钥</span>
-              <span className="flex items-center gap-2"><ShieldCheck size={14} className="text-success" />会话可随时退出</span>
+              <span className="flex items-center gap-2"><Check size={14} className="text-success" />{t('wallet.noPrivateKey')}</span>
+              <span className="flex items-center gap-2"><ShieldCheck size={14} className="text-success" />{t('wallet.exitAnytime')}</span>
             </div>
           </section>
         </div>

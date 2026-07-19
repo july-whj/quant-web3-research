@@ -27,6 +27,19 @@ class Settings(BaseSettings):
     job_mode: str = "inline"
     artifact_dir: Path = REPOSITORY_ROOT / "data" / "reports"
 
+    collector_exchanges: str = "binance,okx"
+    collector_symbol: str = "BTC/USDT"
+    collector_timeframes: str = "1m,5m,15m,1h,4h,1d,1w"
+    collector_initial_lookback_candles: int = 1000
+    collector_gap_lookback_candles: int = 500
+    collector_backfill_page_size: int = 300
+    collector_backfill_max_pages: int = 20
+    collector_reconcile_interval_seconds: int = 60
+    collector_reconnect_max_delay_seconds: int = 60
+    binance_rest_url: str = "https://data-api.binance.vision/api/v3"
+    binance_ws_url: str = "wss://data-stream.binance.vision/ws"
+    okx_ws_url: str = "wss://ws.okx.com:8443/ws/v5/business"
+
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     allowed_chain_ids: str = "56,97"
     siwe_domain: str = "localhost:5173"
@@ -49,6 +62,16 @@ class Settings(BaseSettings):
     @property
     def allowed_chain_id_set(self) -> set[int]:
         return {int(item.strip()) for item in self.allowed_chain_ids.split(",") if item.strip()}
+
+    @computed_field
+    @property
+    def collector_exchange_list(self) -> list[str]:
+        return [item.strip().lower() for item in self.collector_exchanges.split(",") if item.strip()]
+
+    @computed_field
+    @property
+    def collector_timeframe_list(self) -> list[str]:
+        return [item.strip() for item in self.collector_timeframes.split(",") if item.strip()]
 
 
 @lru_cache
