@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Local environments and secrets
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Notebook and editor state
+.ipynb_checkpoints/
+.idea/
+.vscode/
+.DS_Store
+
+# Runtime output
+*.log
+data/raw/*
+data/processed/*
+data/reports/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/reports/.gitkeep

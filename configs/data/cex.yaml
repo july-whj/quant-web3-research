@@ -1,0 +1,4 @@
+exchange: binance
+symbol: BTC/USDT
+timeframe: 1d
+limit: 300

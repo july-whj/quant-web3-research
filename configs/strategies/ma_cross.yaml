@@ -1,0 +1,4 @@
+name: ma_cross
+fast_window: 20
+slow_window: 60
+long_only: true

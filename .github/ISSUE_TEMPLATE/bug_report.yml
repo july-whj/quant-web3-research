@@ -1,0 +1,24 @@
+name: Bug report
+description: 报告可复现的代码、数据或文档问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请说明实际结果和预期结果。不要提交密钥或账户信息。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 包含命令、最小数据和错误信息。
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 环境
+      placeholder: macOS 15, Python 3.11
