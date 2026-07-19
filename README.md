@@ -1,5 +1,9 @@
 # Quant Web3 Research
 
+<p align="center">
+  <img src="docs/assets/logo-primary.png" alt="Quant Web3 Research Logo" width="180">
+</p>
+
 一个面向初学者的 Web3 量化交易研究项目。这里同时保存书稿、Notebook 和可复用的 Python 模块，用同一份代码解释行情获取、策略信号、回测、交易成本、风险指标与链上数据。
 
 项目目前处于早期阶段。默认用途是学习、研究和模拟交易，不会自动连接真实账户下单，也不提供收益承诺。
