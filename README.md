@@ -8,9 +8,12 @@
 
 项目目前处于早期阶段。默认用途是学习、研究和模拟交易，不会自动连接真实账户下单，也不提供收益承诺。
 
+> 在线阅读：**[《从零开始学 Web3 量化交易》](https://quantweb.sryze.cc)**
+> 书稿由 Cloudflare Pages 发布，正文无需登录即可阅读。
+
 ## 现在有什么
 
-- `docs/`：第 1—17 章书稿，以及后续系统实践路线。
+- `docs/`：第 1—17 章书稿、VitePress 在线阅读站，以及后续系统实践路线。
 - `notebooks/`：收益率、复利、时间序列、BTC 行情、双均线、回测和交易成本实验。
 - `src/quant_web3/`：行情、链上 RPC、指标、策略、回测与风险计算的基础模块。
 - `examples/`：可以从命令行运行的最小示例。
@@ -44,6 +47,24 @@ python examples/backtest_ma_cross.py
 ```bash
 jupyter lab
 ```
+
+### 启动在线书
+
+书稿站和研究系统前端相互独立。在线书只读取 `docs/` 中的 Markdown，不需要启动 MySQL、Redis 或 FastAPI：
+
+```bash
+cd docs
+npm install
+npm run dev
+```
+
+浏览器打开 `http://localhost:5173`。生产构建命令为：
+
+```bash
+npm run build
+```
+
+Cloudflare Pages 使用 `docs` 作为 Root directory，构建命令为 `npm run build`，输出目录为 `.vitepress/dist`，正式域名为 `quantweb.sryze.cc`。
 
 ### 启动 Web 研究系统
 
@@ -147,4 +168,9 @@ quant-web3-research/
 
 当前系统已经覆盖“获取数据—生成信号—执行回测—扣除成本—模拟交易”的研究闭环。下一阶段将继续补充链上事件数据、组合级风险控制、告警和可观测性。
 
-项目采用 MIT License。提交问题或代码前，请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+## 许可证
+
+- 程序代码、配置、测试与示例采用 [MIT License](LICENSE)。
+- `docs/` 中的书稿、文字和图表采用 [CC BY-NC-SA 4.0](docs/LICENSE.md)，另有说明的内容除外。
+
+提交问题或代码前，请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
